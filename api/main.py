@@ -9,6 +9,7 @@ import hashlib
 import os
 import secrets
 import subprocess
+import traceback
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -53,8 +54,8 @@ def generate_session_id() -> str:
 
 def get_available_port() -> Optional[int]:
     """Find an available port for ttyd."""
-    Session = Query()
-    active_sessions = sessions_table.search(Session.active == True)
+    SessionQuery = Query()
+    active_sessions = sessions_table.search(SessionQuery.active == True)
     used_ports = {s["port"] for s in active_sessions}
     
     for port in range(TTYD_BASE_PORT, TTYD_BASE_PORT + MAX_CONCURRENT_SESSIONS):
@@ -78,7 +79,11 @@ async def start_demo_container(session_id: str, port: int) -> str:
         DEMO_IMAGE
     ]
     
+    print(f"[DEBUG] Running command: {' '.join(cmd)}")
     result = subprocess.run(cmd, capture_output=True, text=True)
+    print(f"[DEBUG] Return code: {result.returncode}")
+    print(f"[DEBUG] Stdout: {result.stdout}")
+    print(f"[DEBUG] Stderr: {result.stderr}")
     
     if result.returncode != 0:
         raise Exception(f"Failed to start container: {result.stderr}")
@@ -101,11 +106,11 @@ async def stop_demo_container(container_id: str):
 
 async def cleanup_expired_sessions():
     """Clean up expired sessions."""
-    Session = Query()
+    SessionQuery = Query()
     now = datetime.utcnow().isoformat()
     
     expired = sessions_table.search(
-        (Session.active == True) & (Session.expires_at < now)
+        (SessionQuery.active == True) & (SessionQuery.expires_at < now)
     )
     
     for session in expired:
@@ -137,63 +142,80 @@ async def cleanup_loop():
 @app.post("/api/session")
 async def create_session(request: SessionRequest):
     """Create a new demo session."""
-    email = request.email.lower().strip()
-    
-    # Clean up expired sessions first
-    await cleanup_expired_sessions()
-    
-    # Check for available port
-    port = get_available_port()
-    if port is None:
-        raise HTTPException(
-            status_code=503,
-            detail="All demo slots are currently in use. Please try again in a few minutes."
-        )
-    
-    # Record lead
-    leads_table.insert({
-        "email": email,
-        "timestamp": datetime.utcnow().isoformat(),
-        "ip": None,  # Could capture from request if needed
-    })
-    
-    # Create session
-    session_id = generate_session_id()
-    now = datetime.utcnow()
-    expires_at = now + timedelta(minutes=SESSION_DURATION_MINUTES)
-    
     try:
+        print(f"[DEBUG] === Creating session for {request.email} ===")
+        email = request.email.lower().strip()
+        
+        # Clean up expired sessions first
+        print("[DEBUG] Cleaning up expired sessions...")
+        await cleanup_expired_sessions()
+        
+        # Check for available port
+        print("[DEBUG] Getting available port...")
+        port = get_available_port()
+        print(f"[DEBUG] Got port: {port}")
+        if port is None:
+            raise HTTPException(
+                status_code=503,
+                detail="All demo slots are currently in use. Please try again in a few minutes."
+            )
+        
+        # Record lead
+        print("[DEBUG] Recording lead...")
+        leads_table.insert({
+            "email": email,
+            "timestamp": datetime.utcnow().isoformat(),
+            "ip": None,
+        })
+        
+        # Create session
+        session_id = generate_session_id()
+        print(f"[DEBUG] Session ID: {session_id}")
+        now = datetime.utcnow()
+        expires_at = now + timedelta(minutes=SESSION_DURATION_MINUTES)
+        
+        print("[DEBUG] Starting container...")
         container_id = await start_demo_container(session_id, port)
+        print(f"[DEBUG] Container ID: {container_id}")
+        
+        session = {
+            "id": session_id,
+            "email": email,
+            "container_id": container_id,
+            "port": port,
+            "created_at": now.isoformat(),
+            "expires_at": expires_at.isoformat(),
+            "active": True,
+        }
+        
+        print("[DEBUG] Inserting session...")
+        sessions_table.insert(session)
+        
+        # Wait a moment for ttyd to start
+        print("[DEBUG] Waiting for ttyd...")
+        await asyncio.sleep(2)
+        
+        print("[DEBUG] Session created successfully!")
+        return {
+            "session_id": session_id,
+            "session_url": f"/terminal/{session_id}",
+            "expires_in_minutes": SESSION_DURATION_MINUTES,
+        }
+    except HTTPException:
+        raise
     except Exception as e:
+        print("=" * 50)
+        print("SESSION CREATE ERROR:")
+        print(traceback.format_exc())
+        print("=" * 50)
         raise HTTPException(status_code=500, detail=str(e))
-    
-    session = {
-        "id": session_id,
-        "email": email,
-        "container_id": container_id,
-        "port": port,
-        "created_at": now.isoformat(),
-        "expires_at": expires_at.isoformat(),
-        "active": True,
-    }
-    
-    sessions_table.insert(session)
-    
-    # Wait a moment for ttyd to start
-    await asyncio.sleep(2)
-    
-    return {
-        "session_id": session_id,
-        "session_url": f"/terminal/{session_id}",
-        "expires_in_minutes": SESSION_DURATION_MINUTES,
-    }
 
 
 @app.get("/terminal/{session_id}")
 async def terminal_redirect(session_id: str):
     """Redirect to the ttyd terminal for a session."""
-    Session = Query()
-    session = sessions_table.get(Session.id == session_id)
+    SessionQuery = Query()
+    session = sessions_table.get(SessionQuery.id == session_id)
     
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -207,14 +229,13 @@ async def terminal_redirect(session_id: str):
     
     # Redirect to ttyd via Caddy proxy path
     return RedirectResponse(url=f"/t/{session['port']}")
-    
 
 
 @app.get("/api/session/{session_id}")
 async def get_session(session_id: str):
     """Get session status."""
-    Session = Query()
-    session = sessions_table.get(Session.id == session_id)
+    SessionQuery = Query()
+    session = sessions_table.get(SessionQuery.id == session_id)
     
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -233,8 +254,8 @@ async def get_session(session_id: str):
 @app.delete("/api/session/{session_id}")
 async def end_session(session_id: str):
     """End a session early."""
-    Session = Query()
-    session = sessions_table.get(Session.id == session_id)
+    SessionQuery = Query()
+    session = sessions_table.get(SessionQuery.id == session_id)
     
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -259,8 +280,8 @@ async def get_leads(secret: str):
 @app.get("/api/health")
 async def health():
     """Health check endpoint."""
-    Session = Query()
-    active_count = len(sessions_table.search(Session.active == True))
+    SessionQuery = Query()
+    active_count = len(sessions_table.search(SessionQuery.active == True))
     
     return {
         "status": "healthy",
