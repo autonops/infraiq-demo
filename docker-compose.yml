@@ -1,0 +1,47 @@
+# =============================================================================
+# InfraIQ Demo Stack
+# =============================================================================
+# Runs the landing page, API, and manages demo terminal containers.
+#
+# Usage:
+#   docker compose up -d
+#
+# =============================================================================
+
+services:
+  # API + Landing Page
+  demo-api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    container_name: infraiq-demo-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - demo-data:/data
+    environment:
+      - DATA_DIR=/data
+      - DEMO_IMAGE=autonops/infraiq-demo:latest
+      - ADMIN_SECRET=${ADMIN_SECRET:-changeme}
+    networks:
+      - demo-network
+    depends_on:
+      - demo-image-pull
+
+  # Pre-pull demo image
+  demo-image-pull:
+    image: docker:cli
+    container_name: infraiq-demo-pull
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: docker pull autonops/infraiq-demo:latest
+    restart: "no"
+
+volumes:
+  demo-data:
+
+networks:
+  demo-network:
+    driver: bridge

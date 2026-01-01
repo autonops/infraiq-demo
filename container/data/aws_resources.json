@@ -1,0 +1,217 @@
+{
+  "scan_metadata": {
+    "provider": "aws",
+    "account_id": "123456789012",
+    "region": "us-east-1",
+    "scanned_at": "2025-12-31T10:30:00Z",
+    "scanner_version": "0.3.5"
+  },
+  "resources": {
+    "ec2_instances": [
+      {
+        "id": "i-0abc123def456789",
+        "name": "web-server-1",
+        "type": "m5.xlarge",
+        "state": "running",
+        "vpc_id": "vpc-12345678",
+        "subnet_id": "subnet-abcdef01",
+        "public_ip": "54.123.45.67",
+        "private_ip": "10.0.1.100",
+        "security_groups": ["sg-web-public"],
+        "iam_role": "WebServerRole",
+        "launched": "2025-01-15T08:00:00Z",
+        "tags": {"Environment": "production", "Team": "platform"}
+      },
+      {
+        "id": "i-0def456789abc012",
+        "name": "web-server-2",
+        "type": "m5.xlarge",
+        "state": "running",
+        "vpc_id": "vpc-12345678",
+        "subnet_id": "subnet-abcdef02",
+        "public_ip": "54.123.45.68",
+        "private_ip": "10.0.2.100",
+        "security_groups": ["sg-web-public"],
+        "iam_role": "WebServerRole",
+        "launched": "2025-01-15T08:00:00Z"
+      },
+      {
+        "id": "i-0old987654321xyz",
+        "name": "legacy-batch-server",
+        "type": "m4.2xlarge",
+        "state": "running",
+        "vpc_id": "vpc-12345678",
+        "subnet_id": "subnet-abcdef01",
+        "public_ip": null,
+        "private_ip": "10.0.1.200",
+        "security_groups": ["sg-internal"],
+        "iam_role": null,
+        "launched": "2022-03-10T12:00:00Z",
+        "tags": {"Environment": "production"}
+      }
+    ],
+    "rds_instances": [
+      {
+        "id": "acme-production-db",
+        "engine": "postgres",
+        "engine_version": "13.7",
+        "class": "db.r5.xlarge",
+        "storage_gb": 500,
+        "multi_az": true,
+        "encrypted": true,
+        "public": false,
+        "backup_retention": 7,
+        "vpc_id": "vpc-12345678"
+      }
+    ],
+    "s3_buckets": [
+      {
+        "name": "acme-production-assets",
+        "region": "us-east-1",
+        "versioning": true,
+        "encryption": "AES256",
+        "public_access_blocked": true,
+        "logging": true
+      },
+      {
+        "name": "acme-logs-archive",
+        "region": "us-east-1",
+        "versioning": false,
+        "encryption": null,
+        "public_access_blocked": false,
+        "logging": false
+      },
+      {
+        "name": "acme-dev-test-bucket",
+        "region": "us-east-1",
+        "versioning": false,
+        "encryption": null,
+        "public_access_blocked": false,
+        "logging": false
+      }
+    ],
+    "security_groups": [
+      {
+        "id": "sg-web-public",
+        "name": "web-public",
+        "vpc_id": "vpc-12345678",
+        "inbound_rules": [
+          {"protocol": "tcp", "port": 443, "source": "0.0.0.0/0"},
+          {"protocol": "tcp", "port": 80, "source": "0.0.0.0/0"},
+          {"protocol": "tcp", "port": 22, "source": "0.0.0.0/0"}
+        ]
+      },
+      {
+        "id": "sg-internal",
+        "name": "internal",
+        "vpc_id": "vpc-12345678",
+        "inbound_rules": [
+          {"protocol": "tcp", "port": 5432, "source": "10.0.0.0/16"},
+          {"protocol": "tcp", "port": 22, "source": "10.0.0.0/16"}
+        ]
+      }
+    ],
+    "iam_users": [
+      {
+        "name": "deploy-bot",
+        "access_keys": [
+          {"id": "AKIAXXXXXXXX1", "created": "2023-06-15", "last_used": "2025-12-30"},
+          {"id": "AKIAXXXXXXXX2", "created": "2024-01-10", "last_used": null}
+        ],
+        "mfa_enabled": false
+      },
+      {
+        "name": "ci-pipeline",
+        "access_keys": [
+          {"id": "AKIAXXXXXXXX3", "created": "2025-01-01", "last_used": "2025-12-31"}
+        ],
+        "mfa_enabled": false
+      }
+    ],
+    "load_balancers": [
+      {
+        "name": "acme-prod-alb",
+        "type": "application",
+        "scheme": "internet-facing",
+        "vpc_id": "vpc-12345678",
+        "listeners": [
+          {"port": 443, "protocol": "HTTPS", "ssl_policy": "ELBSecurityPolicy-TLS-1-2-2017-01"},
+          {"port": 80, "protocol": "HTTP", "redirect_to": 443}
+        ]
+      }
+    ]
+  },
+  "findings": {
+    "security": [
+      {
+        "severity": "HIGH",
+        "resource": "sg-web-public",
+        "issue": "SSH port 22 open to 0.0.0.0/0",
+        "recommendation": "Restrict SSH access to specific IP ranges or use Session Manager"
+      },
+      {
+        "severity": "HIGH",
+        "resource": "acme-logs-archive",
+        "issue": "S3 bucket has public access enabled and no encryption",
+        "recommendation": "Enable public access block and server-side encryption"
+      },
+      {
+        "severity": "MEDIUM",
+        "resource": "deploy-bot",
+        "issue": "IAM user has multiple access keys, one unused",
+        "recommendation": "Remove unused access key AKIAXXXXXXXX2"
+      },
+      {
+        "severity": "MEDIUM",
+        "resource": "deploy-bot",
+        "issue": "IAM user does not have MFA enabled",
+        "recommendation": "Enable MFA for all IAM users"
+      },
+      {
+        "severity": "LOW",
+        "resource": "acme-production-db",
+        "issue": "RDS instance running PostgreSQL 13.7, newer version available",
+        "recommendation": "Upgrade to PostgreSQL 15 for improved performance and security"
+      }
+    ],
+    "cost": [
+      {
+        "severity": "MEDIUM",
+        "resource": "i-0old987654321xyz",
+        "issue": "EC2 instance using previous generation (m4.2xlarge)",
+        "recommendation": "Migrate to m5.2xlarge for 10% cost savings and better performance",
+        "monthly_savings": 45
+      },
+      {
+        "severity": "LOW",
+        "resource": "acme-dev-test-bucket",
+        "issue": "S3 bucket appears unused (no objects, no recent access)",
+        "recommendation": "Delete if no longer needed",
+        "monthly_savings": 0
+      }
+    ],
+    "compliance": [
+      {
+        "framework": "SOC2",
+        "control": "CC6.1",
+        "status": "FAIL",
+        "resource": "acme-logs-archive",
+        "issue": "Data at rest not encrypted"
+      },
+      {
+        "framework": "SOC2",
+        "control": "CC6.6",
+        "status": "FAIL",
+        "resource": "sg-web-public",
+        "issue": "Unrestricted administrative access"
+      }
+    ]
+  },
+  "summary": {
+    "total_resources": 15,
+    "security_issues": 5,
+    "cost_optimizations": 2,
+    "compliance_gaps": 2,
+    "estimated_monthly_savings": 45
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "scan_metadata": {
+    "provider": "heroku",
+    "app_name": "acme-prod",
+    "scanned_at": "2025-12-31T10:30:00Z",
+    "scanner_version": "0.3.5"
+  },
+  "application": {
+    "name": "acme-prod",
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "region": "us",
+    "stack": "heroku-22",
+    "created_at": "2023-06-15T14:22:00Z",
+    "updated_at": "2025-12-30T08:15:00Z",
+    "maintenance": false,
+    "team": "acme-engineering"
+  },
+  "dynos": [
+    {
+      "type": "web",
+      "size": "standard-2x",
+      "quantity": 3,
+      "command": "gunicorn app:application --workers 4 --bind 0.0.0.0:$PORT"
+    },
+    {
+      "type": "worker",
+      "size": "standard-1x",
+      "quantity": 2,
+      "command": "celery -A tasks worker --loglevel=info"
+    },
+    {
+      "type": "scheduler",
+      "size": "standard-1x",
+      "quantity": 1,
+      "command": "celery -A tasks beat --loglevel=info"
+    }
+  ],
+  "addons": [
+    {
+      "name": "heroku-postgresql",
+      "plan": "standard-0",
+      "attachment_name": "DATABASE",
+      "config_var": "DATABASE_URL",
+      "version": "15.4",
+      "size_gb": 64,
+      "connections": 120,
+      "rows": 45000000
+    },
+    {
+      "name": "heroku-redis",
+      "plan": "premium-1",
+      "attachment_name": "REDIS",
+      "config_var": "REDIS_URL",
+      "version": "7.0",
+      "memory_mb": 1024,
+      "connections": 500
+    },
+    {
+      "name": "papertrail",
+      "plan": "fixa",
+      "attachment_name": "PAPERTRAIL"
+    },
+    {
+      "name": "sendgrid",
+      "plan": "bronze",
+      "attachment_name": "SENDGRID",
+      "config_var": "SENDGRID_API_KEY"
+    },
+    {
+      "name": "cloudamqp",
+      "plan": "tiger",
+      "attachment_name": "CLOUDAMQP",
+      "config_var": "CLOUDAMQP_URL"
+    }
+  ],
+  "config_vars": {
+    "DJANGO_SETTINGS_MODULE": "acme.settings.production",
+    "SECRET_KEY": "[REDACTED]",
+    "ALLOWED_HOSTS": "acme-prod.herokuapp.com,api.acme.io",
+    "AWS_ACCESS_KEY_ID": "[REDACTED]",
+    "AWS_SECRET_ACCESS_KEY": "[REDACTED]",
+    "AWS_S3_BUCKET": "acme-production-assets",
+    "STRIPE_SECRET_KEY": "[REDACTED]",
+    "STRIPE_PUBLISHABLE_KEY": "pk_live_xxx",
+    "SENTRY_DSN": "https://xxx@sentry.io/123",
+    "NEW_RELIC_LICENSE_KEY": "[REDACTED]",
+    "TWILIO_ACCOUNT_SID": "[REDACTED]",
+    "TWILIO_AUTH_TOKEN": "[REDACTED]"
+  },
+  "domains": [
+    {
+      "hostname": "api.acme.io",
+      "kind": "custom",
+      "ssl": true,
+      "acm_status": "cert issued"
+    },
+    {
+      "hostname": "acme-prod.herokuapp.com",
+      "kind": "heroku",
+      "ssl": true
+    }
+  ],
+  "formation": {
+    "total_dynos": 6,
+    "monthly_cost_estimate": 650
+  },
+  "buildpack": {
+    "name": "heroku/python",
+    "url": "https://github.com/heroku/heroku-buildpack-python"
+  },
+  "pipeline": {
+    "name": "acme-pipeline",
+    "stage": "production",
+    "connected_apps": ["acme-staging", "acme-prod"]
+  }
+}

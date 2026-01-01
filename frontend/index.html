@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfraIQ Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .logo span {
+            color: #10b981;
+        }
+
+        .tagline {
+            font-size: 1.1rem;
+            color: #888;
+            margin-bottom: 2rem;
+        }
+
+        .demo-box {
+            background: #141414;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #fff;
+        }
+
+        p {
+            color: #888;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .features {
+            text-align: left;
+            margin-bottom: 1.5rem;
+        }
+
+        .features li {
+            list-style: none;
+            padding: 0.5rem 0;
+            color: #ccc;
+        }
+
+        .features li::before {
+            content: "→ ";
+            color: #10b981;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        input[type="email"] {
+            padding: 0.875rem 1rem;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #1a1a1a;
+            color: #fff;
+            font-size: 1rem;
+            width: 100%;
+        }
+
+        input[type="email"]:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+
+        input[type="email"]::placeholder {
+            color: #555;
+        }
+
+        button {
+            padding: 0.875rem 1.5rem;
+            background: #10b981;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #059669;
+        }
+
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .info {
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .terminal-preview {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            text-align: left;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+        }
+
+        .terminal-preview .prompt {
+            color: #10b981;
+        }
+
+        .terminal-preview .command {
+            color: #fff;
+        }
+
+        .terminal-preview .output {
+            color: #888;
+        }
+
+        .error {
+            color: #ef4444;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .loading {
+            display: none;
+        }
+
+        .loading.active {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Infra<span>IQ</span></div>
+        <p class="tagline">DevOps Automation Suite</p>
+
+        <div class="demo-box">
+            <h1>Try InfraIQ in Your Browser</h1>
+            <p>No installation required. Get a 15-minute interactive terminal session with full access to all InfraIQ tools.</p>
+
+            <ul class="features">
+                <li>Scan a sample Heroku app and generate Terraform</li>
+                <li>Analyze infrastructure for security issues</li>
+                <li>Explore monolith-to-microservices transformation</li>
+                <li>Run SOC2 compliance checks</li>
+            </ul>
+
+            <form id="demo-form">
+                <input 
+                    type="email" 
+                    name="email" 
+                    placeholder="Enter your work email" 
+                    required
+                    autocomplete="email"
+                >
+                <button type="submit">
+                    <span class="btn-text">Launch Demo Terminal</span>
+                    <span class="loading">Launching...</span>
+                </button>
+                <p class="error" id="error-message"></p>
+            </form>
+
+            <p class="info">Your session will expire after 15 minutes. No credit card required.</p>
+
+            <div class="terminal-preview">
+                <div><span class="prompt">$</span> <span class="command">infraiq migrate scan heroku --app-name acme-prod</span></div>
+                <div class="output">Scanning Heroku app: acme-prod...</div>
+                <div class="output">Found: 2 dynos, 1 PostgreSQL, 1 Redis, 12 config vars</div>
+                <div class="output">✓ Scan complete. Run 'infraiq migrate map' to generate Terraform.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('demo-form');
+        const errorMessage = document.getElementById('error-message');
+        const btnText = document.querySelector('.btn-text');
+        const loading = document.querySelector('.loading');
+        const button = form.querySelector('button');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = form.email.value.trim();
+            errorMessage.textContent = '';
+            
+            // Basic validation
+            if (!email.includes('@') || !email.includes('.')) {
+                errorMessage.textContent = 'Please enter a valid email address.';
+                return;
+            }
+
+            // Show loading state
+            btnText.style.display = 'none';
+            loading.classList.add('active');
+            button.disabled = true;
+
+            try {
+                const response = await fetch('/api/session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.session_url) {
+                    // Redirect to terminal
+                    window.location.href = data.session_url;
+                } else {
+                    throw new Error(data.error || 'Failed to create session');
+                }
+            } catch (err) {
+                errorMessage.textContent = err.message || 'Something went wrong. Please try again.';
+                btnText.style.display = 'inline';
+                loading.classList.remove('active');
+                button.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

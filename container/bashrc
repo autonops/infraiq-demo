@@ -1,0 +1,27 @@
+# InfraIQ Demo Environment
+# Session expires in 15 minutes
+
+# Colors
+export PS1='\[\033[01;32m\]infraiq-demo\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+
+# Show welcome message
+cat /etc/motd
+
+# Helpful aliases
+alias ll='ls -la'
+alias scan='infraiq migrate scan heroku --app-name acme-prod --input ~/demo-data/heroku_scan.json'
+alias map='infraiq migrate map ~/demo-data/heroku_scan.json aws'
+alias verify='infraiq verify scan --provider aws --input ~/demo-data/aws_resources.json'
+alias tessera='infraiq tessera analyze --source ~/samples/acme-monolith --input ~/demo-data/tessera_analysis.json'
+alias comply='infraiq comply scan --provider aws --framework soc2 --input ~/demo-data/compliance_report.json'
+
+# Demo data directory
+cd ~/demo-data
+
+# Timer warning (background)
+(
+    sleep 720  # 12 minutes
+    echo ""
+    echo -e "\033[1;33m⚠️  Your demo session expires in 3 minutes.\033[0m"
+    echo ""
+) &
