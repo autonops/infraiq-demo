@@ -1,19 +1,19 @@
 # =============================================================================
 # InfraIQ Demo Container
 # =============================================================================
-# Provides an interactive terminal with InfraIQ + demo data via ttyd.
-# =============================================================================
 
 FROM autonops/infraiq:latest
 
 USER root
 
-# Install ttyd for web terminal
+# Install ttyd from GitHub releases (not in apt)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ttyd \
     vim \
     less \
     tree \
+    curl \
+    && curl -fsSL https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 -o /usr/local/bin/ttyd \
+    && chmod +x /usr/local/bin/ttyd \
     && rm -rf /var/lib/apt/lists/*
 
 # Create demo user
