@@ -34,5 +34,6 @@ WORKDIR /home/demo
 # Expose ttyd port
 EXPOSE 7681
 
-# Start ttyd with bash
+# Override the base image entrypoint
+ENTRYPOINT []
 CMD ["ttyd", "-W", "-t", "fontSize=14", "-t", "theme={'background':'#0a0a0a','foreground':'#e0e0e0'}", "bash", "-l"]
