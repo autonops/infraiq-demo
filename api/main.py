@@ -6,6 +6,7 @@ Handles email capture and Docker container lifecycle for demo sessions.
 
 import asyncio
 import hashlib
+import httpx
 import os
 import secrets
 import subprocess
@@ -16,8 +17,15 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from tinydb import Query, TinyDB
+
+# Blocked email domains (personal/free email providers)
+BLOCKED_EMAIL_DOMAINS = {
+    "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com",
+    "icloud.com", "mail.com", "protonmail.com", "zoho.com", "yandex.com",
+    "gmx.com", "live.com", "msn.com", "me.com", "inbox.com",
+}
 
 # Configuration
 SESSION_DURATION_MINUTES = 15
@@ -35,6 +43,40 @@ leads_table = db.table("leads")
 
 class SessionRequest(BaseModel):
     email: EmailStr
+    
+    @field_validator('email')
+    @classmethod
+    def validate_company_email(cls, v):
+        domain = v.split('@')[1].lower()
+        if domain in BLOCKED_EMAIL_DOMAINS:
+            raise ValueError('Please use your company email address')
+        return v
+
+
+async def send_slack_notification(email: str, session_id: str):
+    """Send Slack notification for new demo session."""
+    webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
+    if not webhook_url:
+        print("[DEBUG] No SLACK_WEBHOOK_URL configured, skipping notification")
+        return
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(webhook_url, json={
+                "text": f"🎉 New InfraIQ Demo Session",
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"*New Demo Session Started*\n\n📧 *Email:* {email}\n🆔 *Session:* `{session_id[:8]}...`\n⏰ *Time:* {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+                        }
+                    }
+                ]
+            })
+        print(f"[DEBUG] Slack notification sent for {email}")
+    except Exception as e:
+        print(f"[DEBUG] Failed to send Slack notification: {e}")
 
 
 class Session(BaseModel):
@@ -171,6 +213,10 @@ async def create_session(request: SessionRequest):
         # Create session
         session_id = generate_session_id()
         print(f"[DEBUG] Session ID: {session_id}")
+        
+        # Send Slack notification
+        await send_slack_notification(email, session_id)
+        
         now = datetime.utcnow()
         expires_at = now + timedelta(minutes=SESSION_DURATION_MINUTES)
         
