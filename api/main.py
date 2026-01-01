@@ -228,7 +228,7 @@ async def terminal_redirect(session_id: str):
         raise HTTPException(status_code=410, detail="Session has expired")
     
     # Redirect to ttyd via Caddy proxy path
-    return RedirectResponse(url=f"/t/{session['port']}")
+    return RedirectResponse(url=f"/t/{session['port']}/")
 
 
 @app.get("/api/session/{session_id}")
