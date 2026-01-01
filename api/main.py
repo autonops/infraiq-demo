@@ -26,7 +26,7 @@ DATA_DIR = os.environ.get("DATA_DIR", "/data")
 DEMO_IMAGE = os.environ.get("DEMO_IMAGE", "autonops/infraiq-demo:latest")
 
 # Initialize
-app = FastAPI(title="InfraIQ Demo API")
+app = FastAPI(title="InfraIQ Demo API", debug=True)
 db = TinyDB(f"{DATA_DIR}/demo.json")
 sessions_table = db.table("sessions")
 leads_table = db.table("leads")
