@@ -205,8 +205,8 @@ async def terminal_redirect(session_id: str):
         await cleanup_expired_sessions()
         raise HTTPException(status_code=410, detail="Session has expired")
     
-    # Redirect to ttyd on the container's port
-    return RedirectResponse(url=f"http://demo.autonops.io:{session['port']}")
+    # Redirect to ttyd via Caddy proxy path
+    return RedirectResponse(url=f"/t/{session['port']}")
     
 
 
