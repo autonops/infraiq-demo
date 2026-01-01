@@ -206,9 +206,8 @@ async def terminal_redirect(session_id: str):
         raise HTTPException(status_code=410, detail="Session has expired")
     
     # Redirect to ttyd on the container's port
-    # Get base URL from environment or use request host
-    base_url = os.environ.get("BASE_URL", "https://demo.autonops.io")
-    return RedirectResponse(url=f"{base_url}:{session['port']}")
+    return RedirectResponse(url=f"http://demo.autonops.io:{session['port']}")
+    
 
 
 @app.get("/api/session/{session_id}")
