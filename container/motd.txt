@@ -44,5 +44,5 @@ Sample Data:
   ~/demo-data/          Pre-scanned infrastructure data
   ~/samples/            Sample applications for analysis
 
-Documentation: https://github.com/autonops/infraIQ
+Documentation: https://autonops.io/docs
 
